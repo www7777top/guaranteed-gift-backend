@@ -20,6 +20,7 @@
     --text: #f5f0e6;
     --muted: #9a8fa8;
     --radius: 18px;
+    --nav-h: 62px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
@@ -31,20 +32,18 @@
     color:var(--text);
     font-family:'Manrope', system-ui, sans-serif;
     min-height:100vh;
-    padding-bottom:90px;
+    padding-bottom:calc(var(--nav-h) + 18px);
   }
   h1,h2,h3{font-family:'Fraunces', serif; margin:0;}
+  button{font-family:'Manrope';}
 
-  /* Header */
   header{
     position:sticky; top:0; z-index:20;
     background:linear-gradient(180deg, rgba(15,11,20,0.97), rgba(15,11,20,0.86) 70%, rgba(15,11,20,0));
     backdrop-filter:blur(10px);
     padding:16px 16px 10px;
   }
-  .brand{
-    display:flex; align-items:center; justify-content:space-between;
-  }
+  .brand{display:flex; align-items:center; justify-content:space-between;}
   .brand-left{display:flex; align-items:center; gap:10px;}
   .brand-mark{
     width:34px;height:34px;border-radius:10px;
@@ -61,26 +60,7 @@
     color:var(--gold-soft);
   }
 
-  /* Category chips */
-  .chips{
-    display:flex; gap:8px; overflow-x:auto; padding:14px 16px 4px;
-    scrollbar-width:none;
-  }
-  .chips::-webkit-scrollbar{display:none;}
-  .chip{
-    flex:0 0 auto;
-    padding:8px 15px; border-radius:100px;
-    background:var(--surface); border:1px solid var(--line);
-    color:var(--muted); font-size:13px; font-weight:600;
-    white-space:nowrap; cursor:pointer; transition:all .15s ease;
-  }
-  .chip.active{
-    background:linear-gradient(135deg, var(--violet), #5a3fe0);
-    color:#fff; border-color:transparent;
-  }
-
-  /* Search */
-  .search-wrap{padding:12px 16px 4px;}
+  .search-wrap{padding:12px 0 0;}
   .search-wrap input{
     width:100%; padding:12px 14px; border-radius:14px;
     background:var(--surface); border:1px solid var(--line);
@@ -89,104 +69,193 @@
   .search-wrap input::placeholder{color:var(--muted);}
   .search-wrap input:focus{outline:none; border-color:var(--violet);}
 
-  /* Grid */
-  .grid{
-    display:grid; grid-template-columns:1fr 1fr;
-    gap:12px; padding:14px 16px 20px;
+  .chips{display:flex; gap:8px; overflow-x:auto; padding:12px 0 2px; scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto; padding:8px 15px; border-radius:100px;
+    background:var(--surface); border:1px solid var(--line);
+    color:var(--muted); font-size:13px; font-weight:600;
+    white-space:nowrap; cursor:pointer; transition:all .15s ease;
   }
+  .chip.active{background:linear-gradient(135deg, var(--violet), #5a3fe0); color:#fff; border-color:transparent;}
+
+  .filter-bar{display:flex; gap:8px; padding:10px 0 4px; align-items:center;}
+  .filter-btn{
+    display:flex; align-items:center; gap:6px;
+    padding:8px 13px; border-radius:100px;
+    background:var(--surface); border:1px solid var(--line);
+    color:var(--text); font-size:12.5px; font-weight:700;
+    cursor:pointer; white-space:nowrap;
+  }
+  .filter-btn.active{border-color:var(--gold); color:var(--gold-soft);}
+  .result-count{margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap;}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:14px 16px 20px;}
   .card{
-    background:var(--surface);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    overflow:hidden;
-    position:relative;
-    transition:transform .12s ease, border-color .12s ease;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; position:relative; transition:transform .12s ease;
   }
   .card:active{transform:scale(0.97);}
   .card-photo{
-    width:100%; aspect-ratio:1/1;
-    background:var(--surface-2);
-    display:flex; align-items:center; justify-content:center;
-    position:relative; overflow:hidden;
+    width:100%; aspect-ratio:1/1; background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
   }
   .card-photo img{width:100%; height:100%; object-fit:cover;}
   .card-photo .placeholder{font-size:34px; opacity:0.35;}
+  .fav-btn{
+    position:absolute; top:8px; right:8px; width:28px; height:28px; border-radius:50%;
+    background:rgba(10,7,14,0.55); backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+    border:1px solid rgba(255,255,255,0.1); cursor:pointer; z-index:2;
+  }
+  .fav-btn.active{color:#ff5c8a;}
   .card-body{padding:10px 12px 12px;}
   .card-name{
     font-size:13.5px; font-weight:700; line-height:1.25;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-    min-height:34px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;
   }
   .card-cat{font-size:10.5px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:0.5px;}
-
-  /* gift-tag price badge — signature element */
   .price-tag{
     margin-top:10px; display:inline-flex; align-items:center; gap:5px;
     background:linear-gradient(135deg, rgba(201,162,39,0.16), rgba(201,162,39,0.06));
     border:1px solid rgba(201,162,39,0.4);
-    padding:5px 10px 5px 8px;
-    border-radius:0 8px 8px 0;
-    position:relative;
+    padding:5px 10px 5px 8px; border-radius:0 8px 8px 0; position:relative;
     font-weight:800; font-size:13.5px; color:var(--gold-soft);
   }
   .price-tag::before{
-    content:'';
-    position:absolute; left:-7px; top:50%; transform:translateY(-50%);
-    width:12px; height:12px; border-radius:50%;
-    background:var(--bg); border:1px solid rgba(201,162,39,0.4);
+    content:''; position:absolute; left:-7px; top:50%; transform:translateY(-50%);
+    width:12px; height:12px; border-radius:50%; background:var(--bg); border:1px solid rgba(201,162,39,0.4);
   }
   .price-tag::after{
-    content:'';
-    position:absolute; left:-1px; top:50%; transform:translateY(-50%);
-    width:4px; height:4px; border-radius:50%;
-    background:rgba(201,162,39,0.4);
+    content:''; position:absolute; left:-1px; top:50%; transform:translateY(-50%);
+    width:4px; height:4px; border-radius:50%; background:rgba(201,162,39,0.4);
   }
 
-  .empty, .loading{
-    grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--muted);
-  }
+  .empty{grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--muted);}
   .empty h3{color:var(--text); font-size:18px; margin-bottom:6px;}
   .empty p{font-size:13px; margin-top:4px;}
 
-  /* Product sheet (bottom sheet on tap) */
+  .page{display:none; max-width:640px; margin:0 auto;}
+  .page.active{display:block;}
+  .page-pad{padding:16px;}
+
+  nav.bottom-nav{
+    position:fixed; left:0; right:0; bottom:0; height:var(--nav-h); z-index:30;
+    background:rgba(21,15,28,0.96); backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);
+    display:flex; align-items:stretch;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .nav-item{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; color:var(--muted); font-size:10.5px; font-weight:700; cursor:pointer;
+    border:none; background:none; position:relative;
+  }
+  .nav-item .icon{font-size:19px; line-height:1;}
+  .nav-item.active{color:var(--gold-soft);}
+  .nav-badge{
+    position:absolute; top:2px; right:calc(50% - 20px);
+    background:var(--violet); color:#fff; font-size:9px; font-weight:800;
+    min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    padding:0 3px;
+  }
+
   .overlay{
-    position:fixed; inset:0; background:rgba(6,4,9,0.6);
-    backdrop-filter:blur(2px);
-    opacity:0; pointer-events:none; transition:opacity .2s ease;
-    z-index:40;
+    position:fixed; inset:0; background:rgba(6,4,9,0.6); backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:40;
   }
   .overlay.open{opacity:1; pointer-events:auto;}
   .sheet{
-    position:fixed; left:0; right:0; bottom:0;
-    background:var(--bg-2);
-    border-radius:22px 22px 0 0;
-    border-top:1px solid var(--line);
-    transform:translateY(100%);
-    transition:transform .25s cubic-bezier(.32,.72,0,1);
-    z-index:41;
-    max-height:85vh; overflow-y:auto;
-    padding-bottom:24px;
+    position:fixed; left:0; right:0; bottom:0; background:var(--bg-2);
+    border-radius:22px 22px 0 0; border-top:1px solid var(--line);
+    transform:translateY(100%); transition:transform .25s cubic-bezier(.32,.72,0,1);
+    z-index:41; max-height:85vh; overflow-y:auto; padding-bottom:28px;
   }
   .sheet.open{transform:translateY(0);}
   .sheet-handle{width:38px; height:4px; background:var(--line); border-radius:4px; margin:10px auto 4px;}
-  .sheet-photo{width:100%; aspect-ratio:4/3; background:var(--surface-2); object-fit:cover;}
-  .sheet-body{padding:16px 20px 0;}
-  .sheet-body h2{font-size:21px; font-weight:600; margin-bottom:6px;}
-  .sheet-body .sheet-cat{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;}
-  .sheet-desc{font-size:14px; color:#cfc7dd; line-height:1.55; margin-top:12px;}
-  .sheet-price{font-family:'Fraunces'; font-size:26px; font-weight:600; color:var(--gold-soft); margin-top:16px;}
-  .sheet-btn{
-    margin-top:16px; width:100%; padding:15px; border:none; border-radius:14px;
-    background:linear-gradient(135deg, var(--violet), #5a3fe0);
-    color:#fff; font-family:'Manrope'; font-weight:700; font-size:15px;
-    cursor:pointer;
+  .sheet-title{font-size:18px; font-weight:600; padding:6px 20px 4px;}
+  .filter-section{padding:14px 20px 0;}
+  .filter-section label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:8px;}
+  .sort-options{display:flex; flex-direction:column; gap:8px;}
+  .sort-option{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-radius:12px; background:var(--surface); border:1px solid var(--line);
+    font-size:13.5px; font-weight:600; cursor:pointer;
   }
-  .close-x{
-    position:absolute; top:14px; right:14px; width:30px; height:30px;
-    border-radius:50%; background:rgba(0,0,0,0.35); border:1px solid var(--line);
-    color:var(--text); display:flex; align-items:center; justify-content:center;
-    font-size:15px; cursor:pointer; z-index:2;
+  .sort-option.active{border-color:var(--violet); color:var(--violet);}
+  .sort-option.active::after{content:'✓'; color:var(--violet); font-weight:800;}
+  .price-range{display:flex; gap:10px;}
+  .price-range input{
+    flex:1; padding:11px 12px; border-radius:10px; background:var(--surface);
+    border:1px solid var(--line); color:var(--text); font-family:'Manrope'; font-size:14px;
   }
+  .price-range input:focus{outline:none; border-color:var(--violet);}
+  .sheet-actions{display:flex; gap:10px; padding:20px 20px 0;}
+  .btn{border:none; border-radius:14px; padding:14px; font-weight:700; font-size:14px; cursor:pointer;}
+  .btn-primary{flex:1; background:linear-gradient(135deg, var(--violet), #5a3fe0); color:#fff;}
+  .btn-ghost{background:var(--surface); border:1px solid var(--line); color:var(--muted);}
+
+  .detail{
+    position:fixed; inset:0; background:var(--bg-2); z-index:50;
+    transform:translateX(100%); transition:transform .25s cubic-bezier(.32,.72,0,1);
+    overflow-y:auto; padding-bottom:40px;
+  }
+  .detail.open{transform:translateX(0);}
+  .detail-topbar{
+    position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; background:linear-gradient(180deg, rgba(21,15,28,0.95), rgba(21,15,28,0.6) 80%, transparent);
+  }
+  .icon-btn{
+    width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,0.35); border:1px solid var(--line);
+    color:var(--text); display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer;
+  }
+  .icon-btn.fav-active{color:#ff5c8a;}
+  .detail-photo{width:100%; aspect-ratio:1/1; background:var(--surface-2); object-fit:cover; margin-top:-52px;}
+  .detail-photo-ph{
+    width:100%; aspect-ratio:1/1; background:var(--surface-2); display:flex; align-items:center; justify-content:center;
+    font-size:64px; opacity:.3; margin-top:-52px;
+  }
+  .detail-body{padding:18px 20px 0;}
+  .detail-cat{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;}
+  .detail-name{font-size:23px; font-weight:600; margin-top:6px;}
+  .detail-desc{font-size:14px; color:#cfc7dd; line-height:1.6; margin-top:14px;}
+
+  .attr-grid{margin-top:20px; display:flex; flex-direction:column; gap:1px; border-radius:14px; overflow:hidden; border:1px solid var(--line);}
+  .attr-row{display:flex; align-items:center; justify-content:space-between; padding:13px 15px; background:var(--surface);}
+  .attr-row .attr-label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;}
+  .attr-row .attr-value{font-size:13.5px; font-weight:700; margin-top:2px;}
+
+  .detail-price-bar{
+    position:sticky; bottom:0; margin-top:22px; padding:14px 20px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg, var(--bg-2) 60%, transparent); display:flex; align-items:center; gap:14px;
+  }
+  .detail-price{font-family:'Fraunces'; font-size:22px; font-weight:600; color:var(--gold-soft); white-space:nowrap;}
+  .detail-buy-btn{
+    flex:1; padding:15px; border:none; border-radius:14px;
+    background:linear-gradient(135deg, var(--violet), #5a3fe0); color:#fff; font-weight:700; font-size:15px; cursor:pointer;
+  }
+
+  .profile-card{
+    display:flex; align-items:center; gap:14px; padding:16px; background:var(--surface);
+    border:1px solid var(--line); border-radius:16px; margin-bottom:16px;
+  }
+  .profile-avatar{
+    width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg, var(--violet), var(--gold));
+    display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:#fff;
+  }
+  .profile-name{font-weight:700; font-size:15px;}
+  .profile-sub{font-size:12px; color:var(--muted); margin-top:2px;}
+  .stat-row{display:flex; gap:10px; margin-bottom:16px;}
+  .stat-box{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:center;}
+  .stat-num{font-family:'Fraunces'; font-size:22px; font-weight:600; color:var(--gold-soft);}
+  .stat-label{font-size:11px; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:.4px;}
+
+  .order-item{display:flex; align-items:center; gap:12px; padding:12px; background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:10px;}
+  .order-item img, .order-item .ph{width:44px; height:44px; border-radius:9px; object-fit:cover; background:var(--surface-2); display:flex; align-items:center; justify-content:center;}
+  .order-item .info{flex:1; min-width:0;}
+  .order-item .info b{font-size:13.5px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .order-item .info span{font-size:11.5px; color:var(--muted);}
+  .order-price{font-size:13px; font-weight:800; color:var(--gold-soft); white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -202,27 +271,101 @@
     </div>
     <div class="balance-pill">✨ <span id="countBadge">0</span></div>
   </div>
-  <div class="search-wrap">
-    <input id="searchInput" type="text" placeholder="Найти подарок...">
-  </div>
+  <div class="search-wrap"><input id="searchInput" type="text" placeholder="Найти подарок..."></div>
   <div class="chips" id="chips"></div>
+  <div class="filter-bar">
+    <div class="filter-btn" id="sortBtn">↕ Сортировка</div>
+    <div class="filter-btn" id="priceFilterBtn">💰 Цена</div>
+    <div class="result-count" id="resultCount"></div>
+  </div>
 </header>
 
-<div class="grid" id="grid">
-  <div class="loading">Загружаем витрину...</div>
+<div class="page active" id="page-home">
+  <div class="grid" id="grid"><div class="empty">Загружаем витрину...</div></div>
 </div>
 
+<div class="page" id="page-favorites">
+  <div class="grid" id="favGrid"></div>
+</div>
+
+<div class="page" id="page-orders">
+  <div class="page-pad">
+    <h2 style="font-size:19px; margin-bottom:14px;">Мои заказы</h2>
+    <div id="ordersList"></div>
+  </div>
+</div>
+
+<div class="page" id="page-profile">
+  <div class="page-pad">
+    <div class="profile-card">
+      <div class="profile-avatar" id="profileAvatar">🎁</div>
+      <div>
+        <div class="profile-name" id="profileName">Гость</div>
+        <div class="profile-sub">Покупатель Gift Market</div>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-num" id="statOrders">0</div><div class="stat-label">Заказов</div></div>
+      <div class="stat-box"><div class="stat-num" id="statFavs">0</div><div class="stat-label">Избранное</div></div>
+    </div>
+    <h2 style="font-size:15px; margin-bottom:10px; color:var(--muted); font-family:'Manrope'; text-transform:uppercase; letter-spacing:.4px;">Последние заказы</h2>
+    <div id="profileOrders"></div>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" data-tab="home"><span class="icon">🏠</span>Главная</button>
+  <button class="nav-item" data-tab="favorites"><span class="icon">♡</span>Избранное<span class="nav-badge" id="favBadge" style="display:none;">0</span></button>
+  <button class="nav-item" data-tab="orders"><span class="icon">🧾</span>Заказы<span class="nav-badge" id="orderBadge" style="display:none;">0</span></button>
+  <button class="nav-item" data-tab="profile"><span class="icon">👤</span>Профиль</button>
+</nav>
+
 <div class="overlay" id="overlay"></div>
-<div class="sheet" id="sheet">
-  <div class="close-x" id="sheetClose">✕</div>
+<div class="sheet" id="filterSheet">
   <div class="sheet-handle"></div>
-  <img class="sheet-photo" id="sheetPhoto" src="" alt="">
-  <div class="sheet-body">
-    <div class="sheet-cat" id="sheetCat"></div>
-    <h2 id="sheetName"></h2>
-    <div class="sheet-desc" id="sheetDesc"></div>
-    <div class="sheet-price" id="sheetPrice"></div>
-    <button class="sheet-btn" id="sheetBtn">Заказать в чате</button>
+  <div class="sheet-title">Сортировка и цена</div>
+  <div class="filter-section">
+    <label>Сортировка</label>
+    <div class="sort-options" id="sortOptions">
+      <div class="sort-option active" data-sort="default">По умолчанию</div>
+      <div class="sort-option" data-sort="new">Сначала новые</div>
+      <div class="sort-option" data-sort="price_asc">Сначала дешевле</div>
+      <div class="sort-option" data-sort="price_desc">Сначала дороже</div>
+    </div>
+  </div>
+  <div class="filter-section">
+    <label>Диапазон цены, ₽</label>
+    <div class="price-range">
+      <input id="priceMin" type="number" placeholder="От">
+      <input id="priceMax" type="number" placeholder="До">
+    </div>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn btn-ghost" id="resetFilters">Сбросить</button>
+    <button class="btn btn-primary" id="applyFilters">Показать</button>
+  </div>
+</div>
+
+<div class="detail" id="detail">
+  <div class="detail-topbar">
+    <div class="icon-btn" id="detailBack">←</div>
+    <div class="icon-btn" id="detailFav">♡</div>
+  </div>
+  <img class="detail-photo" id="detailPhoto" src="" alt="" style="display:none;">
+  <div class="detail-photo-ph" id="detailPhotoPh" style="display:none;">🎁</div>
+  <div class="detail-body">
+    <div class="detail-cat" id="detailCat"></div>
+    <h2 class="detail-name" id="detailName"></h2>
+    <div class="detail-desc" id="detailDesc"></div>
+    <div class="attr-grid">
+      <div class="attr-row"><div><div class="attr-label">Категория</div><div class="attr-value" id="attrCat">—</div></div></div>
+      <div class="attr-row"><div><div class="attr-label">Артикул</div><div class="attr-value" id="attrSku">—</div></div></div>
+      <div class="attr-row"><div><div class="attr-label">Добавлено</div><div class="attr-value" id="attrDate">—</div></div></div>
+    </div>
+  </div>
+  <div class="detail-price-bar">
+    <div class="detail-price" id="detailPrice"></div>
+    <button class="detail-buy-btn" id="detailBuy">Заказать в чате</button>
   </div>
 </div>
 
@@ -235,14 +378,28 @@
 
   let products = [];
   let activeCategory = 'Все';
+  let sortMode = 'default';
+  let priceMin = null, priceMax = null;
+  let favorites = new Set(JSON.parse(localStorage.getItem('gm_favorites') || '[]'));
+  let orders = JSON.parse(localStorage.getItem('gm_orders') || '[]');
+  let currentDetailId = null;
 
   const grid = document.getElementById('grid');
+  const favGrid = document.getElementById('favGrid');
   const chips = document.getElementById('chips');
   const searchInput = document.getElementById('searchInput');
   const countBadge = document.getElementById('countBadge');
 
-  function formatPrice(p){
-    return new Intl.NumberFormat('ru-RU').format(p) + ' ₽';
+  function formatPrice(p){ return new Intl.NumberFormat('ru-RU').format(p) + ' ₽'; }
+  function saveFavorites(){ localStorage.setItem('gm_favorites', JSON.stringify([...favorites])); updateBadges(); }
+  function saveOrders(){ localStorage.setItem('gm_orders', JSON.stringify(orders)); updateBadges(); }
+  function updateBadges(){
+    const favBadge = document.getElementById('favBadge');
+    const orderBadge = document.getElementById('orderBadge');
+    favBadge.textContent = favorites.size;
+    favBadge.style.display = favorites.size ? 'flex' : 'none';
+    orderBadge.textContent = orders.length;
+    orderBadge.style.display = orders.length ? 'flex' : 'none';
   }
 
   async function loadProducts(){
@@ -259,81 +416,210 @@
 
   function renderChips(){
     const cats = ['Все', ...new Set(products.map(p => p.category).filter(Boolean))];
-    chips.innerHTML = cats.map(c =>
-      `<div class="chip ${c === activeCategory ? 'active' : ''}" data-cat="${c}">${c}</div>`
-    ).join('');
+    chips.innerHTML = cats.map(c => `<div class="chip ${c === activeCategory ? 'active' : ''}" data-cat="${c}">${c}</div>`).join('');
     chips.querySelectorAll('.chip').forEach(el => {
-      el.addEventListener('click', () => {
-        activeCategory = el.dataset.cat;
-        renderChips();
-        renderGrid();
-      });
+      el.addEventListener('click', () => { activeCategory = el.dataset.cat; renderChips(); renderGrid(); });
     });
   }
 
-  function renderGrid(){
+  function getFiltered(){
     const q = searchInput.value.trim().toLowerCase();
-    const filtered = products.filter(p => {
+    let list = products.filter(p => {
       const matchCat = activeCategory === 'Все' || p.category === activeCategory;
       const matchQ = !q || p.name.toLowerCase().includes(q);
-      return matchCat && matchQ;
+      const matchMin = priceMin === null || p.price >= priceMin;
+      const matchMax = priceMax === null || p.price <= priceMax;
+      return matchCat && matchQ && matchMin && matchMax;
     });
+    if (sortMode === 'price_asc') list = list.slice().sort((a,b) => a.price - b.price);
+    else if (sortMode === 'price_desc') list = list.slice().sort((a,b) => b.price - a.price);
+    else if (sortMode === 'new') list = list.slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return list;
+  }
 
-    if (!filtered.length){
-      grid.innerHTML = `<div class="empty"><h3>Пока пусто 🎈</h3><p>Здесь появятся подарки, как только их добавят</p></div>`;
-      return;
-    }
-
-    grid.innerHTML = filtered.map(p => `
+  function cardHtml(p){
+    const isFav = favorites.has(p.id);
+    return `
       <div class="card" data-id="${p.id}">
         <div class="card-photo">
           ${p.photoUrl ? `<img src="${p.photoUrl}" alt="${p.name}">` : `<span class="placeholder">🎁</span>`}
+          <div class="fav-btn ${isFav ? 'active' : ''}" data-fav="${p.id}">${isFav ? '♥' : '♡'}</div>
         </div>
         <div class="card-body">
           <div class="card-name">${p.name}</div>
           ${p.category ? `<div class="card-cat">${p.category}</div>` : ''}
           <div class="price-tag">${formatPrice(p.price)}</div>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+  }
 
-    grid.querySelectorAll('.card').forEach(card => {
-      card.addEventListener('click', () => openSheet(card.dataset.id));
+  function renderGrid(){
+    const filtered = getFiltered();
+    document.getElementById('resultCount').textContent = filtered.length ? `${filtered.length} шт.` : '';
+    if (!filtered.length){
+      grid.innerHTML = `<div class="empty"><h3>Ничего не нашлось 🎈</h3><p>Попробуйте изменить фильтры</p></div>`;
+      return;
+    }
+    grid.innerHTML = filtered.map(cardHtml).join('');
+    bindCardEvents(grid);
+  }
+
+  function renderFavorites(){
+    const list = products.filter(p => favorites.has(p.id));
+    if (!list.length){
+      favGrid.innerHTML = `<div class="empty"><h3>Пока пусто 🤍</h3><p>Нажмите на сердечко у товара, чтобы добавить сюда</p></div>`;
+      return;
+    }
+    favGrid.innerHTML = list.map(cardHtml).join('');
+    bindCardEvents(favGrid);
+  }
+
+  function bindCardEvents(container){
+    container.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.fav-btn')) return;
+        openDetail(card.dataset.id);
+      });
     });
+    container.querySelectorAll('.fav-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFavorite(btn.dataset.fav);
+      });
+    });
+  }
+
+  function toggleFavorite(id){
+    if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
+    saveFavorites();
+    renderGrid();
+    if (document.getElementById('page-favorites').classList.contains('active')) renderFavorites();
+    if (currentDetailId === id) updateDetailFavIcon();
   }
 
   searchInput.addEventListener('input', renderGrid);
 
-  // Bottom sheet
-  const overlay = document.getElementById('overlay');
-  const sheet = document.getElementById('sheet');
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+  function switchTab(tab){
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page-${tab}`).classList.add('active');
+    if (tab === 'favorites') renderFavorites();
+    if (tab === 'orders') renderOrders();
+    if (tab === 'profile') renderProfile();
+  }
 
-  function openSheet(id){
+  function renderOrders(){
+    const list = document.getElementById('ordersList');
+    if (!orders.length){
+      list.innerHTML = `<div class="empty" style="padding:40px 10px;"><h3>Заказов пока нет</h3><p>Оформите первый заказ в каталоге</p></div>`;
+      return;
+    }
+    list.innerHTML = orders.slice().reverse().map(orderHtml).join('');
+  }
+  function orderHtml(o){
+    return `
+      <div class="order-item">
+        ${o.photoUrl ? `<img src="${o.photoUrl}">` : `<div class="ph">🎁</div>`}
+        <div class="info"><b>${o.name}</b><span>${new Date(o.date).toLocaleDateString('ru-RU')}</span></div>
+        <div class="order-price">${formatPrice(o.price)}</div>
+      </div>`;
+  }
+
+  function renderProfile(){
+    const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    document.getElementById('profileName').textContent = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : 'Гость';
+    document.getElementById('profileAvatar').textContent = user ? (user.first_name || 'Г')[0].toUpperCase() : '🎁';
+    document.getElementById('statOrders').textContent = orders.length;
+    document.getElementById('statFavs').textContent = favorites.size;
+    const recent = orders.slice(-3).reverse();
+    const box = document.getElementById('profileOrders');
+    box.innerHTML = recent.length ? recent.map(orderHtml).join('') : `<div class="empty" style="padding:20px 0;"><p>Заказов пока нет</p></div>`;
+  }
+
+  const overlay = document.getElementById('overlay');
+  const filterSheet = document.getElementById('filterSheet');
+  function openSheet(el){ overlay.classList.add('open'); el.classList.add('open'); }
+  function closeSheets(){
+    overlay.classList.remove('open');
+    filterSheet.classList.remove('open');
+  }
+  overlay.addEventListener('click', closeSheets);
+  document.getElementById('sortBtn').addEventListener('click', () => openSheet(filterSheet));
+  document.getElementById('priceFilterBtn').addEventListener('click', () => openSheet(filterSheet));
+
+  document.querySelectorAll('.sort-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+    });
+  });
+
+  document.getElementById('resetFilters').addEventListener('click', () => {
+    sortMode = 'default'; priceMin = null; priceMax = null;
+    document.getElementById('priceMin').value = '';
+    document.getElementById('priceMax').value = '';
+    document.querySelectorAll('.sort-option').forEach(o => o.classList.toggle('active', o.dataset.sort === 'default'));
+    document.getElementById('sortBtn').classList.remove('active');
+    document.getElementById('priceFilterBtn').classList.remove('active');
+    renderGrid();
+  });
+
+  document.getElementById('applyFilters').addEventListener('click', () => {
+    const activeSort = document.querySelector('.sort-option.active');
+    sortMode = activeSort ? activeSort.dataset.sort : 'default';
+    const min = document.getElementById('priceMin').value;
+    const max = document.getElementById('priceMax').value;
+    priceMin = min ? Number(min) : null;
+    priceMax = max ? Number(max) : null;
+    document.getElementById('sortBtn').classList.toggle('active', sortMode !== 'default');
+    document.getElementById('priceFilterBtn').classList.toggle('active', priceMin !== null || priceMax !== null);
+    closeSheets();
+    renderGrid();
+  });
+
+  const detail = document.getElementById('detail');
+  function openDetail(id){
     const p = products.find(x => x.id === id);
     if (!p) return;
-    document.getElementById('sheetPhoto').src = p.photoUrl || '';
-    document.getElementById('sheetPhoto').style.display = p.photoUrl ? 'block' : 'none';
-    document.getElementById('sheetCat').textContent = p.category || '';
-    document.getElementById('sheetName').textContent = p.name;
-    document.getElementById('sheetDesc').textContent = p.description || '';
-    document.getElementById('sheetPrice').textContent = formatPrice(p.price);
-    document.getElementById('sheetBtn').onclick = () => {
-      if (tg) {
-        tg.sendData(JSON.stringify({ action: 'order', productId: p.id, name: p.name, price: p.price }));
-      } else {
-        alert('Заказ: ' + p.name);
-      }
-    };
-    overlay.classList.add('open');
-    sheet.classList.add('open');
+    currentDetailId = id;
+    const photo = document.getElementById('detailPhoto');
+    const photoPh = document.getElementById('detailPhotoPh');
+    if (p.photoUrl){ photo.src = p.photoUrl; photo.style.display='block'; photoPh.style.display='none'; }
+    else { photo.style.display='none'; photoPh.style.display='flex'; }
+    document.getElementById('detailCat').textContent = p.category || 'Подарок';
+    document.getElementById('detailName').textContent = p.name;
+    document.getElementById('detailDesc').textContent = p.description || '';
+    document.getElementById('attrCat').textContent = p.category || '—';
+    document.getElementById('attrSku').textContent = '#' + p.id.slice(0, 8).toUpperCase();
+    document.getElementById('attrDate').textContent = p.createdAt ? new Date(p.createdAt).toLocaleDateString('ru-RU') : '—';
+    document.getElementById('detailPrice').textContent = formatPrice(p.price);
+    updateDetailFavIcon();
+    detail.classList.add('open');
   }
-  function closeSheet(){
-    overlay.classList.remove('open');
-    sheet.classList.remove('open');
+  function updateDetailFavIcon(){
+    const isFav = favorites.has(currentDetailId);
+    const el = document.getElementById('detailFav');
+    el.textContent = isFav ? '♥' : '♡';
+    el.classList.toggle('fav-active', isFav);
   }
-  overlay.addEventListener('click', closeSheet);
-  document.getElementById('sheetClose').addEventListener('click', closeSheet);
+  document.getElementById('detailBack').addEventListener('click', () => detail.classList.remove('open'));
+  document.getElementById('detailFav').addEventListener('click', () => toggleFavorite(currentDetailId));
+  document.getElementById('detailBuy').addEventListener('click', () => {
+    const p = products.find(x => x.id === currentDetailId);
+    if (!p) return;
+    orders.push({ id: p.id, name: p.name, price: p.price, photoUrl: p.photoUrl, date: new Date().toISOString() });
+    saveOrders();
+    if (tg) tg.sendData(JSON.stringify({ action: 'order', productId: p.id, name: p.name, price: p.price }));
+    else alert('Заказ оформлен: ' + p.name);
+    detail.classList.remove('open');
+    switchTab('orders');
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === 'orders'));
+  });
 
+  updateBadges();
   loadProducts();
 </script>
 </body>
