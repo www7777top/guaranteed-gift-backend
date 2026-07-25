@@ -28,14 +28,23 @@
   }
   label{display:block; font-size:12px; color:var(--muted); margin:12px 0 6px; text-transform:uppercase; letter-spacing:.4px;}
   label:first-child{margin-top:0;}
-  input, textarea{
+  input, textarea, select{
     width:100%; padding:11px 12px; border-radius:10px;
     background:var(--surface-2); border:1px solid var(--line);
     color:var(--text); font-family:'Manrope'; font-size:14px;
   }
   textarea{resize:vertical; min-height:64px;}
-  input:focus, textarea:focus{outline:none; border-color:var(--violet);}
+  input:focus, textarea:focus, select:focus{outline:none; border-color:var(--violet);}
   input[type=file]{padding:9px;}
+
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+
+  .nft-block{
+    margin-top:18px; padding-top:14px; border-top:1px dashed var(--line);
+    display:none;
+  }
+  .nft-block.show{display:block;}
+  .nft-block .hint{font-size:11.5px; color:var(--muted); margin-bottom:10px; line-height:1.5;}
 
   .btn{
     margin-top:16px; width:100%; padding:14px; border:none; border-radius:12px;
@@ -59,6 +68,11 @@
   .list-item .info{flex:1; min-width:0;}
   .list-item .info b{font-size:13.5px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .list-item .info span{font-size:12px; color:var(--gold-soft);}
+  .badge-nft{
+    font-size:9.5px; font-weight:800; color:#b6a5ff;
+    background:rgba(123,95,255,0.16); border:1px solid rgba(123,95,255,0.4);
+    padding:2px 6px; border-radius:100px; margin-left:6px; text-transform:uppercase;
+  }
 
   #lockScreen{max-width:340px; margin:80px auto 0;}
 </style>
@@ -82,15 +96,68 @@
 
   <div class="card">
     <label>Название</label>
-    <input id="fName" type="text" placeholder="Букет роз">
-    <label>Цена, ₽</label>
-    <input id="fPrice" type="number" placeholder="1990">
+    <input id="fName" type="text" placeholder="Plush Pepe">
+
+    <div class="row2">
+      <div>
+        <label>Цена, ⭐</label>
+        <input id="fPrice" type="number" placeholder="1990">
+      </div>
+      <div>
+        <label>Статус</label>
+        <select id="fStatus">
+          <option value="regular">Обычный подарок</option>
+          <option value="nft">NFT / Коллекционный</option>
+        </select>
+      </div>
+    </div>
+
     <label>Категория</label>
     <input id="fCategory" type="text" placeholder="Цветы">
     <label>Описание</label>
     <textarea id="fDesc" placeholder="Короткое описание товара"></textarea>
     <label>Фото</label>
     <input id="fPhoto" type="file" accept="image/*">
+
+    <div class="nft-block" id="nftBlock">
+      <div class="hint">
+        Заполни, глядя на карточку своего подарка в Telegram (Профиль → Подарки → открой подарок).
+        Сам подарок никуда передавать не нужно — это просто информация для витрины.
+      </div>
+
+      <div class="row2">
+        <div><label>Номер экземпляра</label><input id="fGiftNumber" type="number" placeholder="5475"></div>
+        <div><label>Рыночная цена, ⭐</label><input id="fMarketPrice" type="number" placeholder="1200"></div>
+      </div>
+      <div class="row2">
+        <div><label>Выпущено (номер)</label><input id="fIssuedNumber" type="number" placeholder="6030"></div>
+        <div><label>Выпущено (всего)</label><input id="fTotalIssued" type="number" placeholder="6962"></div>
+      </div>
+
+      <label>Модель</label>
+      <div class="row2">
+        <input id="fModelName" placeholder="Название модели">
+        <input id="fModelRarity" type="number" step="0.1" placeholder="% редкости">
+      </div>
+      <label>Фон (Backdrop)</label>
+      <div class="row2">
+        <input id="fBackdropName" placeholder="Название фона">
+        <input id="fBackdropRarity" type="number" step="0.1" placeholder="% редкости">
+      </div>
+      <label>Символ</label>
+      <div class="row2">
+        <input id="fSymbolName" placeholder="Название символа">
+        <input id="fSymbolRarity" type="number" step="0.1" placeholder="% редкости">
+      </div>
+
+      <label>Подарено кем</label>
+      <input id="fGiftedBy" placeholder="Имя отправителя (необязательно)">
+      <label>Дата вручения</label>
+      <input id="fGiftedDate" type="date">
+      <label>Комментарий к подарку</label>
+      <input id="fGiftComment" placeholder="С днём рождения! (необязательно)">
+    </div>
+
     <button class="btn btn-primary" id="addBtn">Добавить товар</button>
     <div class="status" id="addStatus"></div>
   </div>
@@ -107,6 +174,12 @@
 
   const lockScreen = document.getElementById('lockScreen');
   const adminScreen = document.getElementById('adminScreen');
+  const nftBlock = document.getElementById('nftBlock');
+  const fStatus = document.getElementById('fStatus');
+
+  fStatus.addEventListener('change', () => {
+    nftBlock.classList.toggle('show', fStatus.value === 'nft');
+  });
 
   async function tryLogin(key){
     const status = document.getElementById('loginStatus');
@@ -149,8 +222,8 @@
       <div class="list-item">
         ${p.photoUrl ? `<img src="${p.photoUrl}">` : `<div class="ph">🎁</div>`}
         <div class="info">
-          <b>${p.name}</b>
-          <span>${new Intl.NumberFormat('ru-RU').format(p.price)} ₽</span>
+          <b>${p.name}${p.status === 'nft' ? '<span class="badge-nft">NFT</span>' : ''}</b>
+          <span>${new Intl.NumberFormat('ru-RU').format(p.price)} ⭐</span>
         </div>
         <button class="btn btn-danger" data-id="${p.id}">Удалить</button>
       </div>
@@ -172,9 +245,6 @@
   document.getElementById('addBtn').addEventListener('click', async () => {
     const name = document.getElementById('fName').value.trim();
     const price = document.getElementById('fPrice').value;
-    const category = document.getElementById('fCategory').value.trim();
-    const description = document.getElementById('fDesc').value.trim();
-    const photoFile = document.getElementById('fPhoto').files[0];
     const status = document.getElementById('addStatus');
     const btn = document.getElementById('addBtn');
 
@@ -187,9 +257,28 @@
     const fd = new FormData();
     fd.append('name', name);
     fd.append('price', price);
-    fd.append('category', category);
-    fd.append('description', description);
+    fd.append('category', document.getElementById('fCategory').value.trim());
+    fd.append('description', document.getElementById('fDesc').value.trim());
+    fd.append('status', fStatus.value);
+
+    const photoFile = document.getElementById('fPhoto').files[0];
     if (photoFile) fd.append('photo', photoFile);
+
+    if (fStatus.value === 'nft') {
+      fd.append('giftNumber', document.getElementById('fGiftNumber').value);
+      fd.append('marketPrice', document.getElementById('fMarketPrice').value);
+      fd.append('issuedNumber', document.getElementById('fIssuedNumber').value);
+      fd.append('totalIssued', document.getElementById('fTotalIssued').value);
+      fd.append('modelName', document.getElementById('fModelName').value.trim());
+      fd.append('modelRarity', document.getElementById('fModelRarity').value);
+      fd.append('backdropName', document.getElementById('fBackdropName').value.trim());
+      fd.append('backdropRarity', document.getElementById('fBackdropRarity').value);
+      fd.append('symbolName', document.getElementById('fSymbolName').value.trim());
+      fd.append('symbolRarity', document.getElementById('fSymbolRarity').value);
+      fd.append('giftedBy', document.getElementById('fGiftedBy').value.trim());
+      fd.append('giftedDate', document.getElementById('fGiftedDate').value);
+      fd.append('giftComment', document.getElementById('fGiftComment').value.trim());
+    }
 
     btn.disabled = true;
     status.textContent = 'Сохраняем...';
@@ -204,11 +293,13 @@
       if (res.ok){
         status.textContent = 'Товар добавлен ✓';
         status.className = 'status ok';
-        document.getElementById('fName').value = '';
-        document.getElementById('fPrice').value = '';
-        document.getElementById('fCategory').value = '';
-        document.getElementById('fDesc').value = '';
+        ['fName','fPrice','fCategory','fDesc','fGiftNumber','fMarketPrice','fIssuedNumber',
+         'fTotalIssued','fModelName','fModelRarity','fBackdropName','fBackdropRarity',
+         'fSymbolName','fSymbolRarity','fGiftedBy','fGiftedDate','fGiftComment']
+          .forEach(id => document.getElementById(id).value = '');
         document.getElementById('fPhoto').value = '';
+        fStatus.value = 'regular';
+        nftBlock.classList.remove('show');
         loadList();
       } else {
         const err = await res.json();
