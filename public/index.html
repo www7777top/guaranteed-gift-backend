@@ -115,6 +115,13 @@
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;
   }
   .card-cat{font-size:10.5px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:0.5px;}
+  .nft-badge{
+    position:absolute; top:8px; left:8px; z-index:2;
+    display:flex; align-items:center; gap:3px;
+    background:linear-gradient(135deg, var(--violet), #5a3fe0); color:#fff;
+    font-size:9.5px; font-weight:800; letter-spacing:.4px;
+    padding:4px 8px; border-radius:100px; text-transform:uppercase;
+  }
   .price-tag{
     margin-top:10px; display:inline-flex; align-items:center; gap:5px;
     background:linear-gradient(135deg, rgba(201,162,39,0.16), rgba(201,162,39,0.06));
@@ -224,6 +231,28 @@
   .attr-row{display:flex; align-items:center; justify-content:space-between; padding:13px 15px; background:var(--surface);}
   .attr-row .attr-label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;}
   .attr-row .attr-value{font-size:13.5px; font-weight:700; margin-top:2px;}
+  .attr-row .attr-value.with-rarity{display:flex; align-items:center; gap:6px;}
+  .rarity-pill{
+    font-size:10.5px; font-weight:800; color:var(--gold-soft);
+    background:rgba(201,162,39,0.14); border:1px solid rgba(201,162,39,0.35);
+    padding:2px 7px; border-radius:100px;
+  }
+  .status-pill{
+    display:inline-flex; align-items:center; gap:5px; margin-top:8px;
+    font-size:11.5px; font-weight:800; letter-spacing:.3px; text-transform:uppercase;
+    padding:5px 11px; border-radius:100px;
+  }
+  .status-pill.nft{background:linear-gradient(135deg, rgba(123,95,255,0.22), rgba(123,95,255,0.08)); border:1px solid rgba(123,95,255,0.5); color:#b6a5ff;}
+  .status-pill.regular{background:var(--surface); border:1px solid var(--line); color:var(--muted);}
+  .gift-origin{
+    margin-top:14px; padding:12px 14px; border-radius:12px; background:var(--surface);
+    border:1px solid var(--line); font-size:12.5px; color:#cfc7dd; line-height:1.5;
+  }
+  .gift-origin b{color:var(--text);}
+  .market-price-row{
+    display:flex; align-items:center; justify-content:space-between; padding:13px 15px;
+    background:linear-gradient(135deg, rgba(201,162,39,0.1), rgba(201,162,39,0.03)); border:1px solid rgba(201,162,39,0.3);
+  }
 
   .detail-price-bar{
     position:sticky; bottom:0; margin-top:22px; padding:14px 20px calc(14px + env(safe-area-inset-bottom));
@@ -334,7 +363,7 @@
     </div>
   </div>
   <div class="filter-section">
-    <label>Диапазон цены, ₽</label>
+    <label>Диапазон цены, ⭐</label>
     <div class="price-range">
       <input id="priceMin" type="number" placeholder="От">
       <input id="priceMax" type="number" placeholder="До">
@@ -356,12 +385,23 @@
   <div class="detail-body">
     <div class="detail-cat" id="detailCat"></div>
     <h2 class="detail-name" id="detailName"></h2>
+    <div id="statusPillWrap"></div>
     <div class="detail-desc" id="detailDesc"></div>
+
     <div class="attr-grid">
       <div class="attr-row"><div><div class="attr-label">Категория</div><div class="attr-value" id="attrCat">—</div></div></div>
-      <div class="attr-row"><div><div class="attr-label">Артикул</div><div class="attr-value" id="attrSku">—</div></div></div>
-      <div class="attr-row"><div><div class="attr-label">Добавлено</div><div class="attr-value" id="attrDate">—</div></div></div>
+      <div class="attr-row"><div><div class="attr-label">Номер / артикул</div><div class="attr-value" id="attrSku">—</div></div></div>
+      <div class="attr-row" id="attrIssuedRow" style="display:none;"><div><div class="attr-label">Выпущено экземпляров</div><div class="attr-value" id="attrIssued">—</div></div></div>
+      <div class="attr-row" id="attrModelRow" style="display:none;"><div><div class="attr-label">Модель</div><div class="attr-value with-rarity" id="attrModel"></div></div></div>
+      <div class="attr-row" id="attrBackdropRow" style="display:none;"><div><div class="attr-label">Фон (Backdrop)</div><div class="attr-value with-rarity" id="attrBackdrop"></div></div></div>
+      <div class="attr-row" id="attrSymbolRow" style="display:none;"><div><div class="attr-label">Символ</div><div class="attr-value with-rarity" id="attrSymbol"></div></div></div>
+      <div class="attr-row"><div><div class="attr-label">Добавлено в магазин</div><div class="attr-value" id="attrDate">—</div></div></div>
+      <div class="market-price-row" id="marketPriceRow" style="display:none;">
+        <div><div class="attr-label">Рыночная цена</div><div class="attr-value" id="attrMarketPrice">—</div></div>
+      </div>
     </div>
+
+    <div class="gift-origin" id="giftOrigin" style="display:none;"></div>
   </div>
   <div class="detail-price-bar">
     <div class="detail-price" id="detailPrice"></div>
@@ -378,6 +418,21 @@
   const tg = window.Telegram ? window.Telegram.WebApp : null;
   if (tg) { tg.ready(); tg.expand(); }
 
+  /* Ожидаемая форма объекта товара (что должен отдавать GET /api/products):
+     {
+       id, name, description, category, price,          // базовые поля (price — в звёздах ⭐)
+       photoUrl, createdAt,
+       status: 'regular' | 'nft',                        // обычный подарок или коллекционный NFT
+       giftNumber: 5475,                                 // номер конкретного экземпляра
+       issuedNumber: 6030, totalIssued: 6962,             // тираж — сколько выпущено из скольки
+       model:    { name: 'Gem Signet', rarity: 3.2 },     // % редкости
+       backdrop: { name: 'Emerald',    rarity: 8.1 },
+       symbol:   { name: 'Star',       rarity: 1.4 },
+       marketPrice: 1200,                                 // рыночная цена, если торгуется отдельно
+       giftedBy: 'Имя отправителя', giftedDate: '2026-05-01', giftComment: 'С днём рождения!'
+     }
+     Поля model/backdrop/symbol/issuedNumber/marketPrice/giftedBy нужны только для status:'nft' —
+     для обычных подарков их можно не отправлять, карточка сама скроет пустые блоки. */
   let products = [];
   let activeCategory = 'Все';
   let sortMode = 'default';
@@ -392,7 +447,8 @@
   const searchInput = document.getElementById('searchInput');
   const countBadge = document.getElementById('countBadge');
 
-  function formatPrice(p){ return new Intl.NumberFormat('ru-RU').format(p) + ' ₽'; }
+  function formatPrice(p){ return new Intl.NumberFormat('ru-RU').format(p) + ' ⭐'; }
+  function rarityPill(pct){ return (pct !== undefined && pct !== null) ? `<span class="rarity-pill">${pct}%</span>` : ''; }
   function saveFavorites(){ localStorage.setItem('gm_favorites', JSON.stringify([...favorites])); updateBadges(); }
   function saveOrders(){ localStorage.setItem('gm_orders', JSON.stringify(orders)); updateBadges(); }
   function updateBadges(){
@@ -444,6 +500,7 @@
     return `
       <div class="card" data-id="${p.id}">
         <div class="card-photo">
+          ${p.status === 'nft' ? `<div class="nft-badge">✦ NFT</div>` : ''}
           ${p.photoUrl ? `<img src="${p.photoUrl}" alt="${p.name}">` : `<span class="placeholder">🎁</span>`}
           <div class="fav-btn ${isFav ? 'active' : ''}" data-fav="${p.id}">${isFav ? '♥' : '♡'}</div>
         </div>
@@ -595,9 +652,64 @@
     document.getElementById('detailName').textContent = p.name;
     document.getElementById('detailDesc').textContent = p.description || '';
     document.getElementById('attrCat').textContent = p.category || '—';
-    document.getElementById('attrSku').textContent = '#' + p.id.slice(0, 8).toUpperCase();
+    document.getElementById('attrSku').textContent = p.giftNumber
+      ? `#${p.giftNumber}`
+      : '#' + p.id.slice(0, 8).toUpperCase();
     document.getElementById('attrDate').textContent = p.createdAt ? new Date(p.createdAt).toLocaleDateString('ru-RU') : '—';
     document.getElementById('detailPrice').textContent = formatPrice(p.price);
+
+    // Статус: обычный подарок или коллекционный NFT
+    const statusWrap = document.getElementById('statusPillWrap');
+    if (p.status === 'nft') {
+      statusWrap.innerHTML = `<div class="status-pill nft">✦ NFT · Коллекционный</div>`;
+    } else {
+      statusWrap.innerHTML = `<div class="status-pill regular">Обычный подарок</div>`;
+    }
+
+    // Выпущено экземпляров (тираж)
+    const issuedRow = document.getElementById('attrIssuedRow');
+    if (p.issuedNumber && p.totalIssued) {
+      document.getElementById('attrIssued').textContent = `${new Intl.NumberFormat('ru-RU').format(p.issuedNumber)} / ${new Intl.NumberFormat('ru-RU').format(p.totalIssued)}`;
+      issuedRow.style.display = 'flex';
+    } else {
+      issuedRow.style.display = 'none';
+    }
+
+    // Модель / Фон / Символ — только у NFT-подарков с указанными атрибутами
+    const attrConfig = [
+      ['attrModelRow', 'attrModel', p.model],
+      ['attrBackdropRow', 'attrBackdrop', p.backdrop],
+      ['attrSymbolRow', 'attrSymbol', p.symbol],
+    ];
+    attrConfig.forEach(([rowId, valId, attr]) => {
+      const row = document.getElementById(rowId);
+      if (attr && attr.name) {
+        document.getElementById(valId).innerHTML = `${attr.name} ${rarityPill(attr.rarity)}`;
+        row.style.display = 'flex';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Рыночная цена (если подарок торгуется на маркетплейсе отдельно от цены продажи)
+    const marketRow = document.getElementById('marketPriceRow');
+    if (p.marketPrice) {
+      document.getElementById('attrMarketPrice').textContent = formatPrice(p.marketPrice);
+      marketRow.style.display = 'flex';
+    } else {
+      marketRow.style.display = 'none';
+    }
+
+    // Кем и когда подарен изначально
+    const originBox = document.getElementById('giftOrigin');
+    if (p.giftedBy || p.giftedDate) {
+      const dateStr = p.giftedDate ? new Date(p.giftedDate).toLocaleDateString('ru-RU') : '';
+      originBox.innerHTML = `🎁 Подарено${p.giftedBy ? ` <b>${p.giftedBy}</b>` : ''}${dateStr ? ` · ${dateStr}` : ''}${p.giftComment ? `<br>«${p.giftComment}»` : ''}`;
+      originBox.style.display = 'block';
+    } else {
+      originBox.style.display = 'none';
+    }
+
     updateDetailFavIcon();
     detail.classList.add('open');
   }
