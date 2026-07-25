@@ -1,277 +1,318 @@
-const express = require('express');
-const cors = require('cors');
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Единственный ключ администратора — задаётся в Environment на Render
-const ADMIN_KEY = process.env.ADMIN_KEY || 'change-me-please';
-
-// Токен бота (получи у @BotFather) и секрет для проверки вебхука Telegram
-const BOT_TOKEN = process.env.BOT_TOKEN || '';
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'change-me-webhook-secret';
-const GIFT_CATEGORY = process.env.GIFT_CATEGORY || 'NFT-подарки';
-
-const DATA_DIR = path.join(__dirname, 'data');
-const DATA_FILE = path.join(DATA_DIR, 'products.json');
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, '[]');
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-
-function readProducts() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')); }
-  catch (e) { return []; }
-}
-function writeProducts(list) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(list, null, 2));
-}
-function addProduct(product) {
-  const products = readProducts();
-  products.push(product);
-  writeProducts(products);
-  return product;
-}
-
-async function tgFileUrl(fileId) {
-  if (!fileId || !BOT_TOKEN) return null;
-  try {
-    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
-    const data = await r.json();
-    if (!data.ok) return null;
-    return `https://api.telegram.org/file/bot${BOT_TOKEN}/${data.result.file_path}`;
-  } catch (e) {
-    console.error('tgFileUrl error:', e.message);
-    return null;
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Gift Market — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f0b14; --surface:#1c1524; --surface-2:#241b2e;
+    --line:rgba(245,240,230,0.09);
+    --gold:#c9a227; --gold-soft:#e6c76a; --violet:#7b5fff;
+    --text:#f5f0e6; --muted:#9a8fa8;
   }
-}
-
-function toPercent(permille) {
-  return permille === undefined || permille === null ? undefined : Math.round((permille / 10) * 10) / 10;
-}
-
-app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static(UPLOADS_DIR));
-// admin.html отдаётся как обычный статический файл — сама страница
-// показывает экран блокировки, пока не введён верный ключ, а реальная
-// защита — на уровне API (см. requireAdmin ниже)
-app.use(express.static(path.join(__dirname, 'public')));
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => cb(null, crypto.randomUUID() + path.extname(file.originalname || '')),
-});
-const upload = multer({ storage, limits: { fileSize: 8 * 1024 * 1024 } });
-
-// Единая проверка админ-ключа — читает заголовок x-admin-key
-function requireAdmin(req, res, next) {
-  const key = req.headers['x-admin-key'];
-  if (!key || key !== ADMIN_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Manrope', system-ui, sans-serif;
+    min-height:100vh; padding:20px 16px 60px;
   }
-  next();
-}
+  h1{font-family:'Fraunces', serif; font-size:22px; font-weight:600; margin:0 0 4px;}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:20px;}
 
-// ---------- ПУБЛИЧНОЕ API (его использует mini app) ----------
+  .card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:16px; padding:18px; margin-bottom:16px;
+  }
+  label{display:block; font-size:12px; color:var(--muted); margin:12px 0 6px; text-transform:uppercase; letter-spacing:.4px;}
+  label:first-child{margin-top:0;}
+  input, textarea, select{
+    width:100%; padding:11px 12px; border-radius:10px;
+    background:var(--surface-2); border:1px solid var(--line);
+    color:var(--text); font-family:'Manrope'; font-size:14px;
+  }
+  textarea{resize:vertical; min-height:64px;}
+  input:focus, textarea:focus, select:focus{outline:none; border-color:var(--violet);}
+  input[type=file]{padding:9px;}
 
-app.get('/api/products', (req, res) => {
-  res.json(readProducts());
-});
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
 
-// ---------- АДМИН API (требует заголовок x-admin-key) ----------
+  .nft-block{
+    margin-top:18px; padding-top:14px; border-top:1px dashed var(--line);
+    display:none;
+  }
+  .nft-block.show{display:block;}
+  .nft-block .hint{font-size:11.5px; color:var(--muted); margin-bottom:10px; line-height:1.5;}
 
-app.get('/api/admin/check', requireAdmin, (req, res) => {
-  res.json({ ok: true });
-});
+  .btn{
+    margin-top:16px; width:100%; padding:14px; border:none; border-radius:12px;
+    font-family:'Manrope'; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .btn-primary{background:linear-gradient(135deg, var(--violet), #5a3fe0); color:#fff;}
+  .btn-primary:disabled{opacity:.5;}
+  .btn-danger{background:rgba(220,60,60,0.15); color:#ff7b7b; border:1px solid rgba(220,60,60,0.3); padding:8px 12px; width:auto; margin:0;}
 
-app.get('/api/admin/products', requireAdmin, (req, res) => {
-  res.json(readProducts());
-});
+  .status{font-size:13px; margin-top:10px; min-height:16px;}
+  .status.ok{color:#7ee6a0;}
+  .status.err{color:#ff7b7b;}
 
-app.post('/api/products', requireAdmin, upload.single('photo'), (req, res) => {
-  const products = readProducts();
-  const b = req.body;
-
-  const photoUrl = req.file
-    ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
-    : (b.photoUrl || '');
-
-  const num = (v) => (v === undefined || v === '' ? undefined : Number(v));
-
-  const product = {
-    id: crypto.randomUUID(),
-    name: b.name || 'Без названия',
-    description: b.description || '',
-    category: b.category || '',
-    price: num(b.price) || 0,
-    photoUrl,
-    createdAt: new Date().toISOString(),
-    status: b.status === 'nft' ? 'nft' : 'regular',
-  };
-
-  if (product.status === 'nft') {
-    if (b.giftNumber) product.giftNumber = num(b.giftNumber);
-    if (b.issuedNumber) product.issuedNumber = num(b.issuedNumber);
-    if (b.totalIssued) product.totalIssued = num(b.totalIssued);
-    if (b.modelName) product.model = { name: b.modelName, rarity: num(b.modelRarity) };
-    if (b.backdropName) product.backdrop = { name: b.backdropName, rarity: num(b.backdropRarity) };
-    if (b.symbolName) product.symbol = { name: b.symbolName, rarity: num(b.symbolRarity) };
-    if (b.marketPrice) product.marketPrice = num(b.marketPrice);
-    if (b.giftedBy) product.giftedBy = b.giftedBy;
-    if (b.giftedDate) product.giftedDate = b.giftedDate;
-    if (b.giftComment) product.giftComment = b.giftComment;
+  .list-item{
+    display:flex; align-items:center; gap:12px;
+    padding:10px; border-bottom:1px solid var(--line);
+  }
+  .list-item:last-child{border-bottom:none;}
+  .list-item img{width:46px; height:46px; border-radius:8px; object-fit:cover; background:var(--surface-2);}
+  .list-item .ph{width:46px; height:46px; border-radius:8px; background:var(--surface-2); display:flex; align-items:center; justify-content:center;}
+  .list-item .info{flex:1; min-width:0;}
+  .list-item .info b{font-size:13.5px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .list-item .info span{font-size:12px; color:var(--gold-soft);}
+  .badge-nft{
+    font-size:9.5px; font-weight:800; color:#b6a5ff;
+    background:rgba(123,95,255,0.16); border:1px solid rgba(123,95,255,0.4);
+    padding:2px 6px; border-radius:100px; margin-left:6px; text-transform:uppercase;
   }
 
-  products.push(product);
-  writeProducts(products);
-  res.json(product);
-});
+  #lockScreen{max-width:340px; margin:80px auto 0;}
+</style>
+</head>
+<body>
 
-app.put('/api/products/:id', requireAdmin, upload.single('photo'), (req, res) => {
-  const products = readProducts();
-  const idx = products.findIndex(p => p.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'not found' });
+<div id="lockScreen">
+  <h1>🔐 Вход в админку</h1>
+  <div class="sub">Введите admin-ключ, заданный на сервере</div>
+  <div class="card">
+    <label>Admin key</label>
+    <input id="keyInput" type="password" placeholder="••••••••">
+    <button class="btn btn-primary" id="loginBtn">Войти</button>
+    <div class="status" id="loginStatus"></div>
+  </div>
+</div>
 
-  const b = req.body;
-  const num = (v) => (v === undefined || v === '' ? undefined : Number(v));
-  const existing = products[idx];
+<div id="adminScreen" style="display:none;">
+  <h1>🎁 Gift Market — Admin</h1>
+  <div class="sub">Добавляйте и удаляйте товары витрины</div>
 
-  const photoUrl = req.file
-    ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
-    : (b.photoUrl || existing.photoUrl);
+  <div class="card">
+    <label>Название</label>
+    <input id="fName" type="text" placeholder="Plush Pepe">
 
-  const updated = {
-    ...existing,
-    name: b.name || existing.name,
-    description: b.description ?? existing.description,
-    category: b.category ?? existing.category,
-    price: num(b.price) ?? existing.price,
-    photoUrl,
-    status: b.status === 'nft' ? 'nft' : 'regular',
-  };
+    <div class="row2">
+      <div>
+        <label>Цена, ⭐</label>
+        <input id="fPrice" type="number" placeholder="1990">
+      </div>
+      <div>
+        <label>Статус</label>
+        <select id="fStatus">
+          <option value="regular">Обычный подарок</option>
+          <option value="nft">NFT / Коллекционный</option>
+        </select>
+      </div>
+    </div>
 
-  if (updated.status === 'nft') {
-    updated.giftNumber = num(b.giftNumber) ?? existing.giftNumber;
-    updated.issuedNumber = num(b.issuedNumber) ?? existing.issuedNumber;
-    updated.totalIssued = num(b.totalIssued) ?? existing.totalIssued;
-    updated.model = b.modelName ? { name: b.modelName, rarity: num(b.modelRarity) } : existing.model;
-    updated.backdrop = b.backdropName ? { name: b.backdropName, rarity: num(b.backdropRarity) } : existing.backdrop;
-    updated.symbol = b.symbolName ? { name: b.symbolName, rarity: num(b.symbolRarity) } : existing.symbol;
-    updated.marketPrice = num(b.marketPrice) ?? existing.marketPrice;
-    updated.giftedBy = b.giftedBy ?? existing.giftedBy;
-    updated.giftedDate = b.giftedDate ?? existing.giftedDate;
-    updated.giftComment = b.giftComment ?? existing.giftComment;
-  } else {
-    delete updated.giftNumber; delete updated.issuedNumber; delete updated.totalIssued;
-    delete updated.model; delete updated.backdrop; delete updated.symbol;
-    delete updated.marketPrice; delete updated.giftedBy; delete updated.giftedDate; delete updated.giftComment;
+    <label>Категория</label>
+    <input id="fCategory" type="text" placeholder="Цветы">
+    <label>Описание</label>
+    <textarea id="fDesc" placeholder="Короткое описание товара"></textarea>
+    <label>Фото</label>
+    <input id="fPhoto" type="file" accept="image/*">
+
+    <div class="nft-block" id="nftBlock">
+      <div class="hint">
+        Заполни, глядя на карточку своего подарка в Telegram (Профиль → Подарки → открой подарок).
+        Сам подарок никуда передавать не нужно — это просто информация для витрины.
+      </div>
+
+      <div class="row2">
+        <div><label>Номер экземпляра</label><input id="fGiftNumber" type="number" placeholder="5475"></div>
+        <div><label>Рыночная цена, ⭐</label><input id="fMarketPrice" type="number" placeholder="1200"></div>
+      </div>
+      <div class="row2">
+        <div><label>Выпущено (номер)</label><input id="fIssuedNumber" type="number" placeholder="6030"></div>
+        <div><label>Выпущено (всего)</label><input id="fTotalIssued" type="number" placeholder="6962"></div>
+      </div>
+
+      <label>Модель</label>
+      <div class="row2">
+        <input id="fModelName" placeholder="Название модели">
+        <input id="fModelRarity" type="number" step="0.1" placeholder="% редкости">
+      </div>
+      <label>Фон (Backdrop)</label>
+      <div class="row2">
+        <input id="fBackdropName" placeholder="Название фона">
+        <input id="fBackdropRarity" type="number" step="0.1" placeholder="% редкости">
+      </div>
+      <label>Символ</label>
+      <div class="row2">
+        <input id="fSymbolName" placeholder="Название символа">
+        <input id="fSymbolRarity" type="number" step="0.1" placeholder="% редкости">
+      </div>
+
+      <label>Подарено кем</label>
+      <input id="fGiftedBy" placeholder="Имя отправителя (необязательно)">
+      <label>Дата вручения</label>
+      <input id="fGiftedDate" type="date">
+      <label>Комментарий к подарку</label>
+      <input id="fGiftComment" placeholder="С днём рождения! (необязательно)">
+    </div>
+
+    <button class="btn btn-primary" id="addBtn">Добавить товар</button>
+    <div class="status" id="addStatus"></div>
+  </div>
+
+  <div class="card">
+    <div class="sub" style="margin-bottom:8px;">Товары в каталоге</div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = 'https://guaranteed-gift-backend.onrender.com';
+  let ADMIN_KEY = sessionStorage.getItem('adminKey') || '';
+
+  const lockScreen = document.getElementById('lockScreen');
+  const adminScreen = document.getElementById('adminScreen');
+  const nftBlock = document.getElementById('nftBlock');
+  const fStatus = document.getElementById('fStatus');
+
+  fStatus.addEventListener('change', () => {
+    nftBlock.classList.toggle('show', fStatus.value === 'nft');
+  });
+
+  async function tryLogin(key){
+    const status = document.getElementById('loginStatus');
+    status.textContent = 'Проверка...';
+    status.className = 'status';
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/check`, { headers: { 'x-admin-key': key } });
+      if (res.ok){
+        ADMIN_KEY = key;
+        sessionStorage.setItem('adminKey', key);
+        lockScreen.style.display = 'none';
+        adminScreen.style.display = 'block';
+        loadList();
+      } else {
+        status.textContent = 'Неверный ключ';
+        status.className = 'status err';
+      }
+    } catch (e) {
+      status.textContent = 'Сервер недоступен';
+      status.className = 'status err';
+    }
   }
 
-  products[idx] = updated;
-  writeProducts(products);
-  res.json(updated);
-});
+  document.getElementById('loginBtn').addEventListener('click', () => {
+    tryLogin(document.getElementById('keyInput').value.trim());
+  });
 
-app.delete('/api/products/:id', requireAdmin, (req, res) => {
-  let products = readProducts();
-  products = products.filter(p => p.id !== req.params.id);
-  writeProducts(products);
-  res.json({ ok: true });
-});
+  if (ADMIN_KEY) tryLogin(ADMIN_KEY);
 
-// ---------- Автоприём NFT-подарков из Telegram-канала ----------
-
-app.post('/telegram-webhook', async (req, res) => {
-  res.sendStatus(200);
-
-  const secretHeader = req.headers['x-telegram-bot-api-secret-token'];
-  if (secretHeader !== WEBHOOK_SECRET) {
-    console.warn('⚠️ Вебхук: неверный секретный токен — запрос проигнорирован');
-    return;
-  }
-
-  const update = req.body || {};
-  console.log('📩 Обновление от Telegram:', JSON.stringify(update).slice(0, 3000));
-
-  const msg = update.channel_post || update.message;
-  if (!msg || !msg.unique_gift) return;
-
-  try {
-    const info = msg.unique_gift;
-    const gift = info.gift;
-    if (!gift) return;
-
-    const thumbFileId =
-      gift.model?.sticker?.thumbnail?.file_id ||
-      gift.symbol?.sticker?.thumbnail?.file_id ||
-      null;
-    const photoUrl = thumbFileId ? await tgFileUrl(thumbFileId) : null;
-
-    const product = {
-      id: crypto.randomUUID(),
-      name: `${gift.base_name || gift.name || 'Подарок'}${gift.number ? ' #' + gift.number : ''}`.trim(),
-      description: 'Автоматически добавлено из Telegram-канала.',
-      category: GIFT_CATEGORY,
-      price: info.last_resale_star_count || 0,
-      photoUrl: photoUrl || '',
-      createdAt: new Date().toISOString(),
-      status: 'nft',
-      giftNumber: gift.number,
-      model: gift.model ? { name: gift.model.name, rarity: toPercent(gift.model.rarity_per_mille) } : undefined,
-      backdrop: gift.backdrop ? { name: gift.backdrop.name, rarity: toPercent(gift.backdrop.rarity_per_mille) } : undefined,
-      symbol: gift.symbol ? { name: gift.symbol.name, rarity: toPercent(gift.symbol.rarity_per_mille) } : undefined,
-      marketPrice: info.last_resale_star_count || undefined,
-      giftedDate: new Date().toISOString().slice(0, 10),
-    };
-
-    addProduct(product);
-    console.log('✅ Товар автоматически добавлен в маркетплейс:', product.name);
-  } catch (e) {
-    console.error('Ошибка обработки подарка из вебхука:', e);
-  }
-});
-
-app.get('/setup-webhook', requireAdmin, async (req, res) => {
-  if (!BOT_TOKEN) return res.status(400).json({ error: 'Не задан BOT_TOKEN в переменных окружения' });
-  const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-  const url = `${appUrl}/telegram-webhook`;
-  try {
-    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url,
-        secret_token: WEBHOOK_SECRET,
-        allowed_updates: ['channel_post', 'message'],
-      }),
+  async function loadList(){
+    const list = document.getElementById('list');
+    list.innerHTML = 'Загрузка...';
+    const res = await fetch(`${API_BASE}/api/products`);
+    const products = await res.json();
+    if (!products.length){
+      list.innerHTML = '<div class="sub">Пока нет товаров</div>';
+      return;
+    }
+    list.innerHTML = products.map(p => `
+      <div class="list-item">
+        ${p.photoUrl ? `<img src="${p.photoUrl}">` : `<div class="ph">🎁</div>`}
+        <div class="info">
+          <b>${p.name}${p.status === 'nft' ? '<span class="badge-nft">NFT</span>' : ''}</b>
+          <span>${new Intl.NumberFormat('ru-RU').format(p.price)} ⭐</span>
+        </div>
+        <button class="btn btn-danger" data-id="${p.id}">Удалить</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('.btn-danger').forEach(btn => {
+      btn.addEventListener('click', () => deleteProduct(btn.dataset.id));
     });
-    const data = await r.json();
-    res.json({ webhookUrl: url, telegramResponse: data });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
   }
-});
 
-app.get('/webhook-info', requireAdmin, async (req, res) => {
-  if (!BOT_TOKEN) return res.status(400).json({ error: 'Не задан BOT_TOKEN в переменных окружения' });
-  try {
-    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`);
-    res.json(await r.json());
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  async function deleteProduct(id){
+    if (!confirm('Удалить товар?')) return;
+    await fetch(`${API_BASE}/api/products/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-key': ADMIN_KEY }
+    });
+    loadList();
   }
-});
 
-app.get('/', (req, res) => {
-  res.send('Guaranteed Gift Market backend is running. See /admin.html for the admin panel.');
-});
+  document.getElementById('addBtn').addEventListener('click', async () => {
+    const name = document.getElementById('fName').value.trim();
+    const price = document.getElementById('fPrice').value;
+    const status = document.getElementById('addStatus');
+    const btn = document.getElementById('addBtn');
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    if (!name || !price){
+      status.textContent = 'Укажите название и цену';
+      status.className = 'status err';
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('price', price);
+    fd.append('category', document.getElementById('fCategory').value.trim());
+    fd.append('description', document.getElementById('fDesc').value.trim());
+    fd.append('status', fStatus.value);
+
+    const photoFile = document.getElementById('fPhoto').files[0];
+    if (photoFile) fd.append('photo', photoFile);
+
+    if (fStatus.value === 'nft') {
+      fd.append('giftNumber', document.getElementById('fGiftNumber').value);
+      fd.append('marketPrice', document.getElementById('fMarketPrice').value);
+      fd.append('issuedNumber', document.getElementById('fIssuedNumber').value);
+      fd.append('totalIssued', document.getElementById('fTotalIssued').value);
+      fd.append('modelName', document.getElementById('fModelName').value.trim());
+      fd.append('modelRarity', document.getElementById('fModelRarity').value);
+      fd.append('backdropName', document.getElementById('fBackdropName').value.trim());
+      fd.append('backdropRarity', document.getElementById('fBackdropRarity').value);
+      fd.append('symbolName', document.getElementById('fSymbolName').value.trim());
+      fd.append('symbolRarity', document.getElementById('fSymbolRarity').value);
+      fd.append('giftedBy', document.getElementById('fGiftedBy').value.trim());
+      fd.append('giftedDate', document.getElementById('fGiftedDate').value);
+      fd.append('giftComment', document.getElementById('fGiftComment').value.trim());
+    }
+
+    btn.disabled = true;
+    status.textContent = 'Сохраняем...';
+    status.className = 'status';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/products`, {
+        method: 'POST',
+        headers: { 'x-admin-key': ADMIN_KEY },
+        body: fd
+      });
+      if (res.ok){
+        status.textContent = 'Товар добавлен ✓';
+        status.className = 'status ok';
+        ['fName','fPrice','fCategory','fDesc','fGiftNumber','fMarketPrice','fIssuedNumber',
+         'fTotalIssued','fModelName','fModelRarity','fBackdropName','fBackdropRarity',
+         'fSymbolName','fSymbolRarity','fGiftedBy','fGiftedDate','fGiftComment']
+          .forEach(id => document.getElementById(id).value = '');
+        document.getElementById('fPhoto').value = '';
+        fStatus.value = 'regular';
+        nftBlock.classList.remove('show');
+        loadList();
+      } else {
+        const err = await res.json();
+        status.textContent = err.error || 'Ошибка сохранения';
+        status.className = 'status err';
+      }
+    } catch (e) {
+      status.textContent = 'Сервер недоступен';
+      status.className = 'status err';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
