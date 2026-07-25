@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Gift Market</title>
+<title>Guaranteed Gift Market</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -51,7 +51,7 @@
     display:flex;align-items:center;justify-content:center;font-size:17px;
     box-shadow:0 2px 10px rgba(201,162,39,0.35);
   }
-  .brand h1{font-size:19px; font-weight:600; letter-spacing:0.2px;}
+  .brand h1{font-size:17px; font-weight:600; letter-spacing:0.2px;}
   .brand span.sub{display:block; font-size:11px; color:var(--muted); font-family:'Manrope'; margin-top:1px; letter-spacing:0.3px;}
   .balance-pill{
     display:flex; align-items:center; gap:6px;
@@ -265,7 +265,7 @@
     <div class="brand-left">
       <div class="brand-mark">🎁</div>
       <div>
-        <h1>Gift Market</h1>
+        <h1>Guaranteed Gift Market</h1>
         <span class="sub">Каталог подарков</span>
       </div>
     </div>
@@ -365,13 +365,15 @@
   </div>
   <div class="detail-price-bar">
     <div class="detail-price" id="detailPrice"></div>
-    <button class="detail-buy-btn" id="detailBuy">Заказать в чате</button>
+    <button class="detail-buy-btn" id="detailBuy">Заказать у менеджера</button>
   </div>
 </div>
 
 <script>
   // ⚠️ укажите адрес вашего бэкенда на Render
   const API_BASE = 'https://guaranteed-gift-backend.onrender.com';
+  // Telegram-аккаунт менеджера, куда будут переходить покупатели для оформления заказа за звёзды
+  const MANAGER_USERNAME = 'www13331';
 
   const tg = window.Telegram ? window.Telegram.WebApp : null;
   if (tg) { tg.ready(); tg.expand(); }
@@ -607,16 +609,24 @@
   }
   document.getElementById('detailBack').addEventListener('click', () => detail.classList.remove('open'));
   document.getElementById('detailFav').addEventListener('click', () => toggleFavorite(currentDetailId));
+
+  // Кнопка "Заказать у менеджера": вместо оформления заказа в приложении
+  // сразу открывает диалог с менеджером в Telegram, где оплата идёт звёздами.
   document.getElementById('detailBuy').addEventListener('click', () => {
     const p = products.find(x => x.id === currentDetailId);
     if (!p) return;
-    orders.push({ id: p.id, name: p.name, price: p.price, photoUrl: p.photoUrl, date: new Date().toISOString() });
-    saveOrders();
-    if (tg) tg.sendData(JSON.stringify({ action: 'order', productId: p.id, name: p.name, price: p.price }));
-    else alert('Заказ оформлен: ' + p.name);
+
+    const managerUrl = `https://t.me/${MANAGER_USERNAME}`;
+
+    // Если открыто внутри Telegram Mini App — используем встроенный метод,
+    // чтобы переход произошёл нативно поверх Telegram, а не в обычном браузере.
+    if (tg && typeof tg.openTelegramLink === 'function') {
+      tg.openTelegramLink(managerUrl);
+    } else {
+      window.open(managerUrl, '_blank');
+    }
+
     detail.classList.remove('open');
-    switchTab('orders');
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === 'orders'));
   });
 
   updateBadges();
