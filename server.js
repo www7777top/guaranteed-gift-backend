@@ -8,9 +8,8 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Логин/пароль для админ-панели — задай свои через переменные окружения на Render!
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'change-me-123';
+// Единственный ключ администратора — задаётся в Environment на Render
+const ADMIN_KEY = process.env.ADMIN_KEY || 'change-me-please';
 
 // Токен бота (получи у @BotFather) и секрет для проверки вебхука Telegram
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
@@ -39,7 +38,6 @@ function addProduct(product) {
   return product;
 }
 
-// Получить прямую ссылку на файл, который прислал Telegram (по file_id)
 async function tgFileUrl(fileId) {
   if (!fileId || !BOT_TOKEN) return null;
   try {
@@ -53,15 +51,17 @@ async function tgFileUrl(fileId) {
   }
 }
 
-// rarity_per_mille (промилле, 1000 = 100%) -> проценты
 function toPercent(permille) {
   return permille === undefined || permille === null ? undefined : Math.round((permille / 10) * 10) / 10;
 }
 
-app.use(cors()); // разрешаем запросы из мини-аппа (любой источник)
+app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(UPLOADS_DIR));
-app.use('/admin-assets', express.static(path.join(__dirname, 'public')));
+// admin.html отдаётся как обычный статический файл — сама страница
+// показывает экран блокировки, пока не введён верный ключ, а реальная
+// защита — на уровне API (см. requireAdmin ниже)
+app.use(express.static(path.join(__dirname, 'public')));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
@@ -69,35 +69,32 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 8 * 1024 * 1024 } });
 
-// Простая HTTP Basic Auth для админки — браузер сам покажет окно логина/пароля
-function checkAuth(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Basic ')) {
-    res.set('WWW-Authenticate', 'Basic realm="admin"');
-    return res.status(401).send('Требуется авторизация');
+// Единая проверка админ-ключа — читает заголовок x-admin-key
+function requireAdmin(req, res, next) {
+  const key = req.headers['x-admin-key'];
+  if (!key || key !== ADMIN_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
-  const decoded = Buffer.from(auth.slice(6), 'base64').toString();
-  const idx = decoded.indexOf(':');
-  const user = decoded.slice(0, idx);
-  const pass = decoded.slice(idx + 1);
-  if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
-  res.set('WWW-Authenticate', 'Basic realm="admin"');
-  return res.status(401).send('Неверный логин или пароль');
+  next();
 }
 
-// ---------- ПУБЛИЧНОЕ API (его использует мини-апп) ----------
+// ---------- ПУБЛИЧНОЕ API (его использует mini app) ----------
 
 app.get('/api/products', (req, res) => {
   res.json(readProducts());
 });
 
-// ---------- АДМИН API (защищено логином/паролем) ----------
+// ---------- АДМИН API (требует заголовок x-admin-key) ----------
 
-app.get('/api/admin/products', checkAuth, (req, res) => {
+app.get('/api/admin/check', requireAdmin, (req, res) => {
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/products', requireAdmin, (req, res) => {
   res.json(readProducts());
 });
 
-app.post('/api/products', checkAuth, upload.single('photo'), (req, res) => {
+app.post('/api/products', requireAdmin, upload.single('photo'), (req, res) => {
   const products = readProducts();
   const b = req.body;
 
@@ -136,7 +133,7 @@ app.post('/api/products', checkAuth, upload.single('photo'), (req, res) => {
   res.json(product);
 });
 
-app.put('/api/products/:id', checkAuth, upload.single('photo'), (req, res) => {
+app.put('/api/products/:id', requireAdmin, upload.single('photo'), (req, res) => {
   const products = readProducts();
   const idx = products.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'not found' });
@@ -181,7 +178,7 @@ app.put('/api/products/:id', checkAuth, upload.single('photo'), (req, res) => {
   res.json(updated);
 });
 
-app.delete('/api/products/:id', checkAuth, (req, res) => {
+app.delete('/api/products/:id', requireAdmin, (req, res) => {
   let products = readProducts();
   products = products.filter(p => p.id !== req.params.id);
   writeProducts(products);
@@ -189,15 +186,8 @@ app.delete('/api/products/:id', checkAuth, (req, res) => {
 });
 
 // ---------- Автоприём NFT-подарков из Telegram-канала ----------
-//
-// Как это работает: когда ты передаёшь (Transfer) свой уникальный подарок
-// в чат/канал, где состоит бот, Telegram присылает боту служебное
-// сообщение с полем `unique_gift`, где уже лежат все характеристики:
-// модель, фон, символ (с редкостью), номер экземпляра и т.д.
-// Ничего распознавать вручную не нужно — мы просто читаем эти поля.
 
 app.post('/telegram-webhook', async (req, res) => {
-  // сразу отвечаем Telegram 200, чтобы не было повторных попыток доставки
   res.sendStatus(200);
 
   const secretHeader = req.headers['x-telegram-bot-api-secret-token'];
@@ -210,11 +200,11 @@ app.post('/telegram-webhook', async (req, res) => {
   console.log('📩 Обновление от Telegram:', JSON.stringify(update).slice(0, 3000));
 
   const msg = update.channel_post || update.message;
-  if (!msg || !msg.unique_gift) return; // это сообщение не про уникальный подарок — пропускаем
+  if (!msg || !msg.unique_gift) return;
 
   try {
-    const info = msg.unique_gift;      // UniqueGiftInfo
-    const gift = info.gift;            // UniqueGift
+    const info = msg.unique_gift;
+    const gift = info.gift;
     if (!gift) return;
 
     const thumbFileId =
@@ -247,9 +237,7 @@ app.post('/telegram-webhook', async (req, res) => {
   }
 });
 
-// Одноразовая настройка: открой этот адрес в браузере (спросит логин/пароль
-// от админки), чтобы сообщить Telegram, куда слать обновления.
-app.get('/setup-webhook', checkAuth, async (req, res) => {
+app.get('/setup-webhook', requireAdmin, async (req, res) => {
   if (!BOT_TOKEN) return res.status(400).json({ error: 'Не задан BOT_TOKEN в переменных окружения' });
   const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
   const url = `${appUrl}/telegram-webhook`;
@@ -270,8 +258,7 @@ app.get('/setup-webhook', checkAuth, async (req, res) => {
   }
 });
 
-// Проверка текущего статуса вебхука
-app.get('/webhook-info', checkAuth, async (req, res) => {
+app.get('/webhook-info', requireAdmin, async (req, res) => {
   if (!BOT_TOKEN) return res.status(400).json({ error: 'Не задан BOT_TOKEN в переменных окружения' });
   try {
     const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`);
@@ -281,14 +268,8 @@ app.get('/webhook-info', checkAuth, async (req, res) => {
   }
 });
 
-// ---------- Страница админки ----------
-
-app.get('/admin', checkAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
 app.get('/', (req, res) => {
-  res.send('Guaranteed Gift Market backend is running. See /admin for the admin panel.');
+  res.send('Guaranteed Gift Market backend is running. See /admin.html for the admin panel.');
 });
 
 app.listen(PORT, () => {
